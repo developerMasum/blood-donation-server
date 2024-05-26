@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id                String       @id @default(uuid())
+  name              String
+  email             String       @unique
+  password          String
+  bloodType         String
+  role              UserRole?    @default(USER)
+  location          String
+  availability      Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  UserProfile       UserProfile?
+  // DonorRequests     Request[]    @relation("DonorRequests")
+  RequesterRequests Request[]
+}
+
+// Request model
+model Request {
+  id              String   @id @default(uuid())
+  donorId         String
+  requesterId     String
+  phoneNumber     String
+  dateOfDonation  String
+  hospitalName    String
+  hospitalAddress String
+  reason          String
+  requestStatus   String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  // Donor           User?     @relation("DonorRequests", fields: [donorId], references: [id])
+  Requester       User?    @relation(fields: [requesterId], references: [id])
+}
+
+// UserProfile model
+model UserProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  bio              String?
+  age              Int?
+  contactNumber    String
+  profilePhoto     String?
+  lastDonationDate String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  User             User     @relation(fields: [userId], references: [id])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
