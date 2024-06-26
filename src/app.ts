@@ -7,12 +7,15 @@ import globalErrorHandler from "./app/modules/Error/globalErrorHandler";
 import httpStatus from "http-status";
 
 const app: Application = express();
-app.use(cookieParser())
+app.use(cookieParser());
 
 // PARSER
 // app.use(cors());
+
+// origin: "https://plasmapioneers.vercel.app",
+
 const corsOptions = {
-  origin: "https://plasmapioneers.vercel.app",
+  origin: "http://localhost:3000",
   credentials: true,
 };
 
@@ -26,7 +29,7 @@ app.use(
 
 app.get("/", (req: Request, res: Response) => {
   res.send({
-    message: "welcome to , Plasma Pioneers API!",
+    message: "welcome to ,Alor Pothik Blood Foundation API!",
   });
 });
 
@@ -35,16 +38,13 @@ app.use("/api", router);
 app.use(globalErrorHandler);
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.status(httpStatus.NOT_FOUND).json({
-      success: false,
-      message: "API NOT FOUND!",
-      error: {
-          path: req.originalUrl,
-          message: "Your requested path is not found!"
-      }
-  })
-})
-
-
-
+    success: false,
+    message: "API NOT FOUND!",
+    error: {
+      path: req.originalUrl,
+      message: "Your requested path is not found!",
+    },
+  });
+});
 
 export default app;

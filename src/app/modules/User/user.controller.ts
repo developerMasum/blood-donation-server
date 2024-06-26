@@ -12,7 +12,16 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: 201,
     success: true,
-    message: "User Created successful!",
+    message: "User Profile Created successful!",
+    data: result,
+  });
+});
+const createDonor = catchAsync(async (req: Request, res: Response) => {
+  const result = await userService.createDonorIntoDB(req.body);
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "Donner Profile Created successful!",
     data: result,
   });
 });
@@ -55,7 +64,7 @@ const getMyDonationRequest = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Donation requests retrieved successfully",
+    message: "My Donation requests retrieved successfully",
     data: result,
   });
 });
@@ -131,8 +140,27 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllRequest = catchAsync(async (req: Request, res: Response) => {
+  // console.log(req.query)
+  const filters = pick(req.query, donorFilterableFields);
+  const options = pick(req.query, ["limit", "page", "sortBy", "sortOrder"]);
+
+  const result = await userService.getAllRequest(filters, options);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: " All Donation requests retrieved successfully!",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+
+
 export const userController = {
   createUser,
+  createDonor,
   getAllDonor,
   createDonationRequest,
   getMyDonationRequest,
@@ -142,4 +170,6 @@ export const userController = {
   getSingleDonor,
   deleteUser,
   requestedIGot,
+  getAllRequest,
+
 };

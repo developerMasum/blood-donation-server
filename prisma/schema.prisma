@@ -15,23 +15,51 @@ datasource db {
 
 // User model
 model User {
-  id                String       @id @default(uuid())
-  name              String
-  email             String       @unique
-  password          String
-  bloodType         String
-  role              UserRole?    @default(USER)
-  location          String
-  availability      Boolean      @default(true)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  UserProfile       UserProfile?
-  // DonorRequests     Request[]    @relation("DonorRequests")
-  RequesterRequests Request[]
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  password     String
+  profilePhoto String?
+  role         UserRole?  @default(USER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  // donner Donner? @relation(fields: [donnerId], references: [id])
+  sendRequests Requests[]
+}
+
+model Donor {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  password       String
+  bloodType      String
+  totalDonations Int?      @default(0)
+  role           UserRole? @default(DONOR)
+  location       String
+  availability   Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  DonorProfile DonorProfile?
+  gotRequests  Requests[]
+}
+
+model DonorProfile {
+  id               String   @id @default(uuid())
+  donorId          String   @unique
+  bio              String?
+  age              String?
+  contactNumber    String
+  profilePhoto     String?
+  lastDonationDate String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  donor Donor? @relation(fields: [donorId], references: [id])
 }
 
 // Request model
-model Request {
+model Requests {
   id              String   @id @default(uuid())
   donorId         String
   requesterId     String
@@ -43,22 +71,17 @@ model Request {
   requestStatus   String   @default("PENDING")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  // Donor           User?     @relation("DonorRequests", fields: [donorId], references: [id])
-  Requester       User?    @relation(fields: [requesterId], references: [id])
+  requester       User?    @relation(fields: [requesterId], references: [id])
+  donor           Donor?   @relation(fields: [donorId], references: [id])
 }
 
-// UserProfile model
-model UserProfile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  bio              String?
-  age              Int?
-  contactNumber    String
-  profilePhoto     String?
-  lastDonationDate String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  User             User     @relation(fields: [userId], references: [id])
+model Blogs {
+  id          String   @id @default(uuid())
+  title       String
+  image       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum RequestStatus {
@@ -70,4 +93,5 @@ enum RequestStatus {
 enum UserRole {
   USER
   ADMIN
+  DONOR
 }

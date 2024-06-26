@@ -1,4 +1,10 @@
-import { Prisma, PrismaClient, User, UserProfile } from "@prisma/client";
+import {
+  Donor,
+  DonorProfile,
+  Prisma,
+  PrismaClient,
+  User,
+} from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { IPaginationOptions } from "../../Interfaces/IPaginationOptions";
 import { paginationHelper } from "../../../Helpers/paginationHelpers";
@@ -8,10 +14,8 @@ import config from "../../../config";
 import { Secret } from "jsonwebtoken";
 
 const prisma = new PrismaClient();
-
 const createUserIntoDB = async (userData: any) => {
   let createdUser: User | null = null;
-  let createdProfile: UserProfile | null = null;
   const hashedPassword: string = await bcrypt.hash(userData.password, 12);
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -20,29 +24,13 @@ const createUserIntoDB = async (userData: any) => {
           name: userData.name,
           email: userData.email,
           password: hashedPassword,
-        
-          bloodType: userData.bloodType,
-          location: userData.location,
-
-        },
-      });
-
-      createdProfile = await tx.userProfile.create({
-        data: {
-          userId: createdUser.id,
-          bio: userData.bio,
-          age: userData.age,
-          contactNumber: userData.contactNumber ,
           profilePhoto: userData.profilePhoto,
-          lastDonationDate: userData.lastDonationDate,
         },
       });
 
       const { password, role, ...userWithoutPasswordAndRole } = createdUser;
 
-
-
-      return { data: userWithoutPasswordAndRole, userProfile:createdProfile };
+      return { data: userWithoutPasswordAndRole };
     });
 
     return result;
@@ -53,11 +41,139 @@ const createUserIntoDB = async (userData: any) => {
   }
 };
 
+const createDonorIntoDB = async (userData: any) => {
+  let createDonor: Donor | null = null;
+  let createdProfile: DonorProfile | null = null;
+  let createdUser: User | null = null;
+  const hashedPassword: string = await bcrypt.hash(userData.password, 12);
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      createDonor = await tx.donor.create({
+        data: {
+          name: userData.name,
+          email: userData.email,
+          password: hashedPassword,
+          bloodType: userData.bloodType,
+          location: userData.location,
+          availability: userData.availability,
+        },
+      });
+
+      createdProfile = await tx.donorProfile.create({
+        data: {
+          donorId: createDonor.id,
+          bio: userData.bio,
+          age: userData.age,
+          contactNumber: userData.contactNumber,
+          profilePhoto: userData.profilePhoto,
+          lastDonationDate: userData.lastDonationDate,
+        },
+      });
+      createdUser = await tx.user.create({
+        data: {
+          id: createDonor.id,
+          name: userData.name,
+          email: userData.email,
+          password: hashedPassword,
+          role: "DONOR",
+          profilePhoto: userData.profilePhoto,
+        },
+      });
+
+      const { password, role, ...donnerWithoutPasswordAndRole } = createDonor;
+
+      return {
+        data: donnerWithoutPasswordAndRole,
+        donnerProfile: createdProfile,
+        user: createdUser,
+      };
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw new Error("Failed to create user.");
+  }
+};
+
+// const getAllDonor = async (params: any, options: IPaginationOptions) => {
+//   const { page, limit, skip } = paginationHelper.calculatePagination(options);
+//   const { searchTerm, ...filterData } = params;
+
+//   const andConditions: Prisma.DonorWhereInput[] = [];
+
+//   //console.log(filterData);
+//   if (params.searchTerm) {
+//     andConditions.push({
+//       OR: donorSearchAbleFields.map((field) => ({
+//         [field]: {
+//           contains: params.searchTerm,
+//           mode: "insensitive",
+//         },
+//       })),
+//     });
+//   }
+
+//   if (Object.keys(filterData).length > 0) {
+//     andConditions.push({
+//       AND: Object.keys(filterData).map((key) => ({
+//         [key]: {
+//           equals: (filterData as any)[key],
+//         },
+//       })),
+//     });
+//   }
+
+//   const whereConditions: Prisma.DonorWhereInput =
+//     andConditions.length > 0 ? { AND: andConditions } : {};
+
+//   const result = await prisma.donor.findMany({
+//     where: whereConditions,
+//     skip,
+//     take: limit,
+//     orderBy:
+//       options.sortBy && options.sortOrder
+//         ? {
+//             [options.sortBy]: options.sortOrder,
+//           }
+//         : {
+//             createdAt: "desc",
+//           },
+//     select: {
+//       id: true,
+//       name: true,
+//       email: true,
+//       totalDonations: true,
+//       bloodType: true,
+//       location: true,
+//       availability: true,
+//       createdAt: true,
+//       updatedAt: true,
+//       DonorProfile: true,
+//     },
+//   });
+
+//   const total = await prisma.donor.count({
+//     where: whereConditions,
+//   });
+
+//   return {
+//     meta: {
+//       page,
+//       limit,
+//       total,
+//     },
+//     data: result,
+//   };
+// };
+
+
 const getAllDonor = async (params: any, options: IPaginationOptions) => {
   const { page, limit, skip } = paginationHelper.calculatePagination(options);
   const { searchTerm, ...filterData } = params;
 
-  const andConditions: Prisma.UserWhereInput[] = [];
+  const andConditions: Prisma.DonorWhereInput[] = [];
 
   //console.log(filterData);
   if (params.searchTerm) {
@@ -81,10 +197,10 @@ const getAllDonor = async (params: any, options: IPaginationOptions) => {
     });
   }
 
-  const whereConditions: Prisma.UserWhereInput =
+  const whereConditions: Prisma.DonorWhereInput =
     andConditions.length > 0 ? { AND: andConditions } : {};
 
-  const result = await prisma.user.findMany({
+  const donors = await prisma.donor.findMany({
     where: whereConditions,
     skip,
     take: limit,
@@ -100,16 +216,49 @@ const getAllDonor = async (params: any, options: IPaginationOptions) => {
       id: true,
       name: true,
       email: true,
+      totalDonations: true,
       bloodType: true,
       location: true,
       availability: true,
       createdAt: true,
       updatedAt: true,
-      UserProfile: true,
+      DonorProfile: {
+        select: {
+          lastDonationDate: true,
+          contactNumber: true,
+          profilePhoto: true,
+        },
+      },
     },
   });
 
-  const total = await prisma.user.count({
+ const today = new Date();
+
+ // Update availability for donors with last donation more than 60 days ago
+ for (const donor of donors) {
+   const lastDonationDateStr = donor.DonorProfile?.lastDonationDate;
+   const lastDonationDate = lastDonationDateStr
+     ? new Date(lastDonationDateStr)
+     : null;
+
+   let daysSinceLastDonation: number | null = null;
+   if (lastDonationDate) {
+     daysSinceLastDonation = Math.floor(
+       (today.getTime() - lastDonationDate.getTime()) / (1000 * 3600 * 24)
+     );
+   }
+
+   // Ensure daysSinceLastDonation is not null before comparison
+   if (daysSinceLastDonation !== null && daysSinceLastDonation > 60) {
+     await prisma.donor.update({
+       where: { id: donor.id },
+       data: { availability: true },
+     });
+   }
+ }
+
+
+  const total = await prisma.donor.count({
     where: whereConditions,
   });
 
@@ -119,9 +268,11 @@ const getAllDonor = async (params: any, options: IPaginationOptions) => {
       limit,
       total,
     },
-    data: result,
+    data: donors,
   };
 };
+
+
 
 const createDonationRequest = async (token: string, data: any) => {
   // console.log(data, "data: ");
@@ -136,14 +287,14 @@ const createDonationRequest = async (token: string, data: any) => {
     }
 
     const tokenId = verifiedUser.id;
-    console.log(tokenId)
+    // console.log(tokenId)
 
-    const donor = await prisma.user.findUnique({
+    const donor = await prisma.donor.findUnique({
       where: {
         id: data.donorId,
       },
       include: {
-        UserProfile: true,
+        DonorProfile: true,
       },
     });
     //  console.log(donor);
@@ -152,7 +303,7 @@ const createDonationRequest = async (token: string, data: any) => {
       throw new Error("Donor not found");
     }
 
-    const result = await prisma.request.create({
+    const result = await prisma.requests.create({
       data: {
         donorId: data.donorId,
         requesterId: tokenId,
@@ -185,7 +336,7 @@ const createDonationRequest = async (token: string, data: any) => {
         availability: donor.availability,
         createdAt: donor.createdAt,
         updatedAt: donor.updatedAt,
-        userProfile: donor.UserProfile,
+        DonorProfile: donor.DonorProfile,
       },
     };
 
@@ -195,25 +346,30 @@ const createDonationRequest = async (token: string, data: any) => {
   }
 };
 
-const getMyDonationRequest = async (token:string) => {
+const getMyDonationRequest = async (token: string) => {
   const verifiedUser = jwtHelpers.verifyToken(
     token,
     config.jwt.jwt_secret as Secret
   );
   const userId = verifiedUser.id;
   console.log(userId);
-  const result = await prisma.request.findMany({
-   where:{
-    requesterId:userId
-   },
- 
+  const result = await prisma.requests.findMany({
+    where: {
+      requesterId: userId,
+    },
+    include: {
+      donor: {
+        select: {
+          name: true,
+
+          bloodType: true,
+          location: true,
+          availability: true,
+          totalDonations: true,
+        },
+      },
+    },
   });
-  // console.log(result);
-  // const donnerInfo = await prisma.user.findUniqueOrThrow({
-  //   where:{
-  //     id:result?.donnerId
-  //   }
-  // })
   return result;
 };
 const requestedIGot = async (token: string) => {
@@ -227,9 +383,19 @@ const requestedIGot = async (token: string) => {
     console.log("Verified User ID:", userId);
 
     // Fetch request information where requesterId matches the userId
-    const requestInfo = await prisma.request.findMany({
+    const requestInfo = await prisma.requests.findMany({
       where: {
         donorId: userId,
+      },
+      include: {
+        requester: {
+          select: {
+            name: true,
+            email: true,
+
+            profilePhoto: true,
+          },
+        },
       },
     });
     console.log("Request Information:", requestInfo);
@@ -239,16 +405,16 @@ const requestedIGot = async (token: string) => {
       const requesterId = requestInfo[0].requesterId;
       console.log("Donor ID:", requesterId);
 
-      // Fetch user information based on the donorId
-      const donorInfo = await prisma.user.findUniqueOrThrow({
-        where: {
-          id: requesterId,
-        },
-      });
-      console.log("Donor Information:", donorInfo);
+      // // Fetch user information based on the donorId
+      // const donorInfo = await prisma.user.findUniqueOrThrow({
+      //   where: {
+      //     id: requesterId,
+      //   },
+      // });
+      // console.log("Donor Information:", donorInfo);
 
       // Return both requestInfo and donorInfo
-      return { requestInfo, donorInfo };
+      return { requestInfo };
     } else {
       console.log("No requests found for this user.");
       return { requestInfo: [], donorInfo: null };
@@ -259,22 +425,63 @@ const requestedIGot = async (token: string) => {
   }
 };
 
+const updateRequestStatus = async (id:string, data:any) => {
+  try {
+    // Ensure 'prisma' is imported and accessible
 
+    const result = await prisma.$transaction(async (tx) => {
+      // Update the request status
+      const donner = await tx.requests.update({
+        where: {
+          id,
+        },
+        data: {
+          requestStatus: data,
+        },
+      });
 
+      if (data === "APPROVED" && donner) {
+        // Check if donner exists
+  const d =      await tx.donor.update({
+          where: {
+            id: donner.donorId,
+          },
+          data: {
+            totalDonations: {
+              increment: 1,
+            },
+            availability: {
+              set: false,
+            },
+            DonorProfile: {
+              update: {
+                lastDonationDate: new Date().toISOString(),
+              },
+            }
+          },
+        });
+        console.log(d)
 
-const updateRequestStatus = async (id: string, data: string) => {
-  // console.log(data);
+      //  const profile =  await tx.donorProfile.update({
+      //     where: {
+      //       id: donner.donorId, 
+      //     },
+      //     data: {
+      //       lastDonationDate: new Date().toISOString(),
+      //     },
+      //   });
+      //   console.log(profile)
+      }
+    });
 
-  const result = await prisma.request.update({
-    where: {
-      id,
-    },
-    data: {
-      requestStatus: data,
-    },
-  });
-  return result;
+    return result;
+  } catch (error) {
+    // Handle any errors that might occur during the transaction
+    console.error("Error updating request status:", error);
+    throw error; // Rethrow the error for the caller to handle
+  }
 };
+
 
 const getMyProfile = async (token: any) => {
   const verifiedUser = jwtHelpers.verifyToken(
@@ -287,22 +494,16 @@ const getMyProfile = async (token: any) => {
     where: {
       id: userId,
     },
-    select:{
-      id:true,
-      name:true,
-      email:true,
-      bloodType:true,
-      location:true,
-      availability:true,
-      createdAt:true,
-      updatedAt:true,
-      UserProfile: true,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
   return result;
 };
-
-
 
 const updateMyProfile = async (token: string, userData: any) => {
   const verifiedUser = jwtHelpers.verifyToken(
@@ -312,11 +513,11 @@ const updateMyProfile = async (token: string, userData: any) => {
 
   const userId = verifiedUser.id;
 
-  const result = await prisma.userProfile.update({
+  const result = await prisma.donorProfile.update({
     where: {
-      userId:userId
+      id: userId,
     },
-    data: userData 
+    data: userData,
   });
 
   return result;
@@ -325,14 +526,13 @@ const updateMyProfile = async (token: string, userData: any) => {
 const getSingleDonor = async (id: string) => {
   // console.log(data);
 
-  const result = await prisma.user.findUniqueOrThrow({
+  const result = await prisma.donor.findUniqueOrThrow({
     where: {
       id,
     },
-    include:{
-      UserProfile: true
-    }
-
+    include: {
+      DonorProfile: true,
+    },
   });
   return result;
 };
@@ -370,11 +570,99 @@ const deleteUser = async (userId: string) => {
   }
 };
 
+const getAllRequest = async (params: any, options: IPaginationOptions) => {
+  const { page, limit, skip } = paginationHelper.calculatePagination(options);
+  const { searchTerm, ...filterData } = params;
 
+  const andConditions: Prisma.RequestsWhereInput[] = [];
+
+  //console.log(filterData);
+  if (params.searchTerm) {
+    andConditions.push({
+      OR: donorSearchAbleFields.map((field) => ({
+        [field]: {
+          contains: params.searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (Object.keys(filterData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filterData).map((key) => ({
+        [key]: {
+          equals: (filterData as any)[key],
+        },
+      })),
+    });
+  }
+
+  const whereConditions: Prisma.RequestsWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const result = await prisma.requests.findMany({
+    where: whereConditions,
+    skip,
+    take: limit,
+    orderBy:
+      options.sortBy && options.sortOrder
+        ? {
+            [options.sortBy]: options.sortOrder,
+          }
+        : {
+            createdAt: "desc",
+          },
+    select: {
+      id: true,
+      phoneNumber: true,
+      hospitalAddress: true,
+      hospitalName: true,
+      dateOfDonation: true,
+      requestStatus: true,
+      donor: {
+        select: {
+          name: true,
+          email: true,
+          bloodType: true,
+          totalDonations: true,
+          location: true,
+          DonorProfile: {
+            select: {
+              age: true,
+              lastDonationDate: true,
+              contactNumber: true,
+            },
+          },
+        },
+      },
+      requester: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.requests.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: result,
+  };
+};
 
 
 export const userService = {
   createUserIntoDB,
+  createDonorIntoDB,
   getAllDonor,
   createDonationRequest,
   getMyDonationRequest,
@@ -384,4 +672,6 @@ export const userService = {
   getSingleDonor,
   requestedIGot,
   deleteUser,
+  getAllRequest,
+
 };
