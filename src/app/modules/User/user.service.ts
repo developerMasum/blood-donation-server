@@ -168,7 +168,6 @@ const createDonorIntoDB = async (userData: any) => {
 //   };
 // };
 
-
 const getAllDonor = async (params: any, options: IPaginationOptions) => {
   const { page, limit, skip } = paginationHelper.calculatePagination(options);
   const { searchTerm, ...filterData } = params;
@@ -232,31 +231,30 @@ const getAllDonor = async (params: any, options: IPaginationOptions) => {
     },
   });
 
- const today = new Date();
+  const today = new Date();
 
- // Update availability for donors with last donation more than 60 days ago
- for (const donor of donors) {
-   const lastDonationDateStr = donor.DonorProfile?.lastDonationDate;
-   const lastDonationDate = lastDonationDateStr
-     ? new Date(lastDonationDateStr)
-     : null;
+  // Update availability for donors with last donation more than 60 days ago
+  for (const donor of donors) {
+    const lastDonationDateStr = donor.DonorProfile?.lastDonationDate;
+    const lastDonationDate = lastDonationDateStr
+      ? new Date(lastDonationDateStr)
+      : null;
 
-   let daysSinceLastDonation: number | null = null;
-   if (lastDonationDate) {
-     daysSinceLastDonation = Math.floor(
-       (today.getTime() - lastDonationDate.getTime()) / (1000 * 3600 * 24)
-     );
-   }
+    let daysSinceLastDonation: number | null = null;
+    if (lastDonationDate) {
+      daysSinceLastDonation = Math.floor(
+        (today.getTime() - lastDonationDate.getTime()) / (1000 * 3600 * 24)
+      );
+    }
 
-   // Ensure daysSinceLastDonation is not null before comparison
-   if (daysSinceLastDonation !== null && daysSinceLastDonation > 60) {
-     await prisma.donor.update({
-       where: { id: donor.id },
-       data: { availability: true },
-     });
-   }
- }
-
+    // Ensure daysSinceLastDonation is not null before comparison
+    if (daysSinceLastDonation !== null && daysSinceLastDonation > 60) {
+      await prisma.donor.update({
+        where: { id: donor.id },
+        data: { availability: true },
+      });
+    }
+  }
 
   const total = await prisma.donor.count({
     where: whereConditions,
@@ -271,8 +269,6 @@ const getAllDonor = async (params: any, options: IPaginationOptions) => {
     data: donors,
   };
 };
-
-
 
 const createDonationRequest = async (token: string, data: any) => {
   // console.log(data, "data: ");
@@ -425,7 +421,7 @@ const requestedIGot = async (token: string) => {
   }
 };
 
-const updateRequestStatus = async (id:string, data:any) => {
+const updateRequestStatus = async (id: string, data: any) => {
   try {
     // Ensure 'prisma' is imported and accessible
 
@@ -442,7 +438,7 @@ const updateRequestStatus = async (id:string, data:any) => {
 
       if (data === "APPROVED" && donner) {
         // Check if donner exists
-  const d =      await tx.donor.update({
+        const d = await tx.donor.update({
           where: {
             id: donner.donorId,
           },
@@ -457,20 +453,20 @@ const updateRequestStatus = async (id:string, data:any) => {
               update: {
                 lastDonationDate: new Date().toISOString(),
               },
-            }
+            },
           },
         });
-        console.log(d)
+        console.log(d);
 
-      //  const profile =  await tx.donorProfile.update({
-      //     where: {
-      //       id: donner.donorId, 
-      //     },
-      //     data: {
-      //       lastDonationDate: new Date().toISOString(),
-      //     },
-      //   });
-      //   console.log(profile)
+        //  const profile =  await tx.donorProfile.update({
+        //     where: {
+        //       id: donner.donorId,
+        //     },
+        //     data: {
+        //       lastDonationDate: new Date().toISOString(),
+        //     },
+        //   });
+        //   console.log(profile)
       }
     });
 
@@ -481,7 +477,6 @@ const updateRequestStatus = async (id:string, data:any) => {
     throw error; // Rethrow the error for the caller to handle
   }
 };
-
 
 const getMyProfile = async (token: any) => {
   const verifiedUser = jwtHelpers.verifyToken(
@@ -539,16 +534,16 @@ const getSingleDonor = async (id: string) => {
 const deleteUser = async (userId: string) => {
   try {
     // Step 1: Delete related records from the Request table
-    await prisma.request.deleteMany({
+    await prisma.requests.deleteMany({
       where: {
         OR: [{ requesterId: userId }, { donorId: userId }],
       },
     });
 
     // Step 2: Delete related records from the UserProfile table
-    await prisma.userProfile.deleteMany({
+    await prisma.donorProfile.deleteMany({
       where: {
-        userId,
+        id: userId,
       },
     });
 
@@ -659,7 +654,6 @@ const getAllRequest = async (params: any, options: IPaginationOptions) => {
   };
 };
 
-
 export const userService = {
   createUserIntoDB,
   createDonorIntoDB,
@@ -673,5 +667,4 @@ export const userService = {
   requestedIGot,
   deleteUser,
   getAllRequest,
-
 };
