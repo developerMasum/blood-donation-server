@@ -25,6 +25,7 @@ CREATE TABLE "Donor" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "bloodType" TEXT NOT NULL,
+    "totalDonations" INTEGER DEFAULT 0,
     "role" "UserRole" DEFAULT 'DONOR',
     "location" TEXT NOT NULL,
     "availability" BOOLEAN NOT NULL DEFAULT true,
@@ -39,7 +40,7 @@ CREATE TABLE "DonorProfile" (
     "id" TEXT NOT NULL,
     "donorId" TEXT NOT NULL,
     "bio" TEXT,
-    "age" INTEGER,
+    "age" TEXT,
     "contactNumber" TEXT NOT NULL,
     "profilePhoto" TEXT,
     "lastDonationDate" TEXT,
@@ -50,7 +51,7 @@ CREATE TABLE "DonorProfile" (
 );
 
 -- CreateTable
-CREATE TABLE "Requester" (
+CREATE TABLE "Requests" (
     "id" TEXT NOT NULL,
     "donorId" TEXT NOT NULL,
     "requesterId" TEXT NOT NULL,
@@ -63,7 +64,19 @@ CREATE TABLE "Requester" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Requester_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Requests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Blogs" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "image" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Blogs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -79,7 +92,7 @@ CREATE UNIQUE INDEX "DonorProfile_donorId_key" ON "DonorProfile"("donorId");
 ALTER TABLE "DonorProfile" ADD CONSTRAINT "DonorProfile_donorId_fkey" FOREIGN KEY ("donorId") REFERENCES "Donor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Requester" ADD CONSTRAINT "Requester_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Requests" ADD CONSTRAINT "Requests_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Requester" ADD CONSTRAINT "Requester_donorId_fkey" FOREIGN KEY ("donorId") REFERENCES "Donor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Requests" ADD CONSTRAINT "Requests_donorId_fkey" FOREIGN KEY ("donorId") REFERENCES "Donor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
